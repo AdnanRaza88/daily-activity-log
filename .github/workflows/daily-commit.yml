@@ -1,0 +1,41 @@
+name: Daily Activity Commit
+
+on:
+  schedule:
+    # Runs every day at 00:30 UTC (around 5:30 AM PKT)
+    - cron: '30 0 * * *'
+  workflow_dispatch:  # Allows manual trigger from Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  daily-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update ACTIVITY.md
+        run: |
+          DATE=$(date -u +%Y-%m-%d)
+          # Check if today's entry already exists to avoid duplicate commits
+          if grep -q "| $DATE " ACTIVITY.md; then
+            echo "Entry for $DATE already exists. Skipping."
+            exit 0
+          fi
+          echo "| $DATE | Daily check-in |" >> ACTIVITY.md
+
+      - name: Commit and push
+        run: |
+          git add ACTIVITY.md
+          git diff --staged --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore: daily activity log - $(date -u +%Y-%m-%d)"
+          git push
